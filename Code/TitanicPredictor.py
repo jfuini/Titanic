@@ -1,4 +1,4 @@
-#%%
+
 # -*- coding: utf-8 -*-
 
 """
@@ -6,7 +6,7 @@ Created on Tue Mar 22 23:05:06 2016
 
 @author: John Fuini
 """
-
+#%%
 import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier, export_graphviz #classification tree
@@ -14,9 +14,6 @@ from sklearn.cross_validation import KFold #helper that makes it easy to do cros
 from sklearn import svm #support vector machine
 from sklearn.grid_search import GridSearchCV
 import matplotlib.pyplot as plt #for plotting
-#from sknn.mlp import Classifier, Layer #NOT WORKING
-#import theano
-#import lasagne #NOT WORKING ON WINDOWS
 from mpl_toolkits.mplot3d import Axes3D
 
 
@@ -196,10 +193,6 @@ x -> (x - mean)/std_deviation
 """
 
 def standardize_series(series):
-    """
-    Note that pandas doesn't like this style of replacing things.  It wants me to use loc, but will still do it.
-    I'll have to learn how to do this correctly later.
-    """
     return (series-series.mean())/series.std()
 
 Xy["Sex"] = standardize_series(Xy["Sex"])
@@ -220,15 +213,22 @@ Xy["Fare"] = standardize_series(Xy["Fare"])
 """
 Data Analysis
 
-Now with our data clean, we can start doing some machine learning on it!  Oh boy!
+Now with our data clean, we can start doing some machine learning on it!
 
 """
+
+"""
+Classificaltion Tree
+
+"""
+
+
 print("DATA ANALYSIS (Classification Tree):")
 X = Xy[features]
 labels = Xy["Survived"]
 
 
-#how trees work (note the next two lines are just an example, and not needed for code)
+#how trees work (note the next lines are just an example, and not needed for code)
 #tree = DecisionTreeClassifier()
 #tree.fit(X, labels)
 #tree.predict()
@@ -347,17 +347,6 @@ grid.fit(X, labels)
 
 print("The best parameters are %s with a score of %0.2f"
       % (grid.best_params_, grid.best_score_))
-      
-"""
-C_2d_range = [1e-2, 1, 1e2]
-gamma_2d_range = [1e-1, 1, 1e1]
-classifiers = []
-for C in C_2d_range:
-    for gamma in gamma_2d_range:
-        clf = svm.SVC(kernel = "rbf", C=C, gamma=gamma)
-        clf.fit(X, labels)
-        classifiers.append((C, gamma, clf))     
-"""        
 
 #The best parameters are {'C': 0.825, 'gamma': 0.2} with a score of 0.83
      
@@ -368,6 +357,7 @@ C = 0.83
 """
 SVM guassian (building classifier)
 """
+# Really now, this should be used on TEST data, and not the cross validation data.  
 gamma = 0.2
 C = 0.83     
 #how SVMs work
@@ -414,42 +404,6 @@ print("Average success rate for SVM Gaussian: %s" % ave_success)
 
 
 
-"""
-# Old code for manually finding gamma
-
-for j, g in enumerate(gamma):
-    
-    titanicSVMgauss = svm.SVC(kernel='rbf', gamma = g)
-    predictions = []
-    num_folds = 10
-    kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
-
-    i = 0;
-    for train, cval in kf:    
-    #setting up the partitions of our data
-        X_train = X.loc[train] #subset of data to train on
-        X_cval = X.loc[cval] #subset of data to test on
-        labels_train = labels.loc[train]#labels pertaining to the train data
-        labels_cval = labels.loc[cval] #labels pertaining to the test data
-    
-        #training the SVM
-        titanicSVMgauss.fit(X_train, labels_train) #fitting only on the training data
-        predictions = titanicSVMgauss.predict(X_cval)
-        labels_test = labels_test.values #just turning this into an ndarray instead of a pandas series
-    
-        # monitor success rate
-        failure_array = abs(predictions - labels_test) # correct survival prediction will produce 0, fails will produce 1
-        total_tested = len(labels_test)
-        frac_failed = sum(failure_array)/float(total_tested)
-        accuracy[i,j] = (1 - frac_failed)
-        i = i + 1 #probably a more intelligent way to do this.
-
-    ave_success = sum(accuracy[:,j])/num_folds
-    print("Average success rate gamma = %s , Success: %s" % (g, ave_success))
-
-
-"""
-
 
 #%%
 """
@@ -462,9 +416,9 @@ gamma = 0.2
 C = 0.83     
 
 #2D classifier for visualization
-Xy = data[features + ["Survived"]]
-Xy_2d_males = Xy[["Age", "SibSp" ,"Survived"]][Xy["Sex"]==0]
-Xy_2d_females = Xy[["Age", "SibSp", "Survived"]][Xy["Sex"]==1]
+XyUnNorm = data[features + ["Survived"]]
+Xy_2d_males = XyUnNorm[["Age", "SibSp" ,"Survived"]][XyUnNorm["Sex"]==0]
+Xy_2d_females = XyUnNorm[["Age", "SibSp", "Survived"]][XyUnNorm["Sex"]==1]
 X_2d_males = Xy_2d_males[["Age","SibSp"]]
 X_2d_females = Xy_2d_females[["Age","SibSp"]]
 y_males = Xy_2d_males["Survived"]
@@ -523,26 +477,8 @@ plt.axis('tight')
 plt.show()
 
 
-
 """
-plt.figure(figsize=(8, 6))
-xx, yy = np.meshgrid(np.linspace(-3, 3, 200), np.linspace(-3, 3, 200))
-for (k, (C, gamma, clf)) in enumerate(classifiers):
-    # evaluate decision function in a grid
-    Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-
-    # visualize decision function for these parameters
-    plt.subplot(len(C_2d_range), len(gamma_2d_range), k + 1)
-    plt.title("gamma=10^%d, C=10^%d" % (np.log10(gamma), np.log10(C)),
-              size='medium')
-
-    # visualize parameter's effect on decision function
-    plt.pcolormesh(xx, yy, -Z, cmap=plt.cm.RdBu)
-    plt.scatter(X_2d[:, 0], X_2d[:, 1], c=y_2d, cmap=plt.cm.RdBu_r)
-    plt.xticks(())
-    plt.yticks(())
-    plt.axis('tight')
+Feature Generation that didn't seem to help any of our classifiers
 
 """
 
@@ -570,9 +506,8 @@ features.remove("Parch")
 X = X[features]
 X["Dependence"] = standardize_series(X["Dependence"])
 
+
 """
-
-
 
 
 
@@ -610,8 +545,8 @@ plt.show()
 #that women and children are saved first, what does siblings have to do with it? Do siblings help or hurt?  Lets find out!
 #need to add the survided labels to the data set.
 
-Xy = data[features + ["Survived"]]
-sibs_ave_survival = Xy.pivot_table(index = "SibSp", values = "Survived", aggfunc = np.mean)
+#Xy = data[features + ["Survived"]]
+sibs_ave_survival = Xy.pivot_table(values = "Survived", index = "SibSp", aggfunc = np.mean)
 plt.plot(sibs_ave_survival, 'ko')
 plt.title('Siblings help or hurt your survival chance?')
 plt.xlabel('Number of Siblings')
@@ -646,9 +581,9 @@ def age_label(row):
     else: 
         return 3 #Adult
         
-Xy["Age_Group"] = Xy.apply(age_label, axis = 1)
+XyUnNorm["Age_Group"] = XyUnNorm.apply(age_label, axis = 1)
 
-age_groups_by_sex_survival = Xy.pivot_table(index = ["Age_Group", "Sex"], values = "Survived", aggfunc = np.mean)
+age_groups_by_sex_survival = XyUnNorm.pivot_table(index = ["Age_Group", "Sex"], values = "Survived", aggfunc = np.mean)
 
 males_survival_by_age_group = []
 females_survival_by_age_group = []
@@ -676,8 +611,8 @@ Lets visualize the 3 pairings of the top three important features
 
 #Xy["Survied"][Xy["Survived"]==1]
 
-s_frame = Xy[["Sex", "Age", "SibSp"]][Xy["Survived"]==1]
-d_frame = Xy[["Sex", "Age", "SibSp"]][Xy["Survived"]==0]
+s_frame = XyUnNorm[["Sex", "Age", "SibSp"]][XyUnNorm["Survived"]==1]
+d_frame = XyUnNorm[["Sex", "Age", "SibSp"]][XyUnNorm["Survived"]==0]
 s_males_frame = s_frame[["Age", "SibSp"]][s_frame["Sex"]==1]
 d_males_frame = d_frame[["Age", "SibSp"]][d_frame["Sex"]==1]
 s_females_frame = s_frame[["Age", "SibSp"]][s_frame["Sex"]==0]
@@ -707,7 +642,6 @@ plt.show()
 
 
 fig = plt.figure()
-#line = plt.figure()
 plt.plot(s_males[:,0], s_males[:,1], "bo")
 plt.plot(d_males[:,0], d_males[:,1], "ro")
 plt.title('Males')
@@ -716,7 +650,6 @@ plt.ylabel('SibSp')
 plt.show()
 
 fig = plt.figure()
-#line = plt.figure()
 plt.plot(s_females[:,0], s_females[:,1], "bo")
 plt.plot(d_females[:,0], d_females[:,1], "rx")
 plt.title('Females')
@@ -725,24 +658,125 @@ plt.ylabel('SibSp')
 plt.show()
 
 
+#%%
+
+"""
+
+Kaggle Submission
+
+
+Our best predictor was the Guassian SVM with C and sigma chosen to be 
+gamma = 0.2
+C = 0.83    
+
+"""
+
+
+
+test = pd.read_csv('test.csv')
+print(test.head())
 
 #%%
 """
-Neural Network   NOT WORKING
 
-
-
-
-nn = Classifier(
-    layers=[
-        Layer("Maxout", units=100, pieces=2),
-        Layer("Softmax")],
-    learning_rate=0.001,
-    n_iter=25)
-nn.fit(X_train, y_train)
-
-#y_valid = nn.predict(labels_test)
-
-#score = nn.score(X_test, labels_test)
+Cleaning the Test data
 
 """
+
+# Pclass
+# checking if any test data is missing
+temp = test.loc[np.isnan(test["Pclass"]), "Pclass"] 
+print("Number of missing elembents in 'Pclass': %s" % len(temp)) #good. None.
+
+# Sex
+# checking if any data is missing None or Null (notice since this data is not numeric, I'm using pd.isnull instead of np.isnan)
+temp = test.loc[pd.isnull(test["Sex"]), "Sex"] 
+print("Number of missing elembents in 'Sex': %s" % len(temp)) #
+test.loc[test["Sex"] == "male", "Sex"] = 0
+test.loc[test["Sex"] == "female", "Sex"] = 1
+
+
+# Age
+# checking if any data is missing
+temp = test.loc[np.isnan(data["Age"]), "Age"] 
+print("Number of missing elembents in 'Pclass': %s" % len(temp)) # So we are missing the age of 177 out of 891 passengers. 
+# small enough to replace with the mean.
+test["Age"] = test["Age"].fillna(test["Age"].median()) #replace NaN with median age
+temp = test.loc[np.isnan(test["Age"]), "Age"] #double check that no more NaN
+print("After replacing missing elements in Age with the mean, the number of missing elemnts in 'Age' is now %s" % len(temp))
+
+
+# SibSp
+# checking if any data is missing
+temp = test.loc[np.isnan(test["SibSp"]), "SibSp"] 
+print("Number of missing elembents in 'SibSp': %s" % len(temp)) #good. None.
+
+# Parch
+# checking if any data is missing
+temp = test.loc[np.isnan(test["Parch"]), "Parch"] 
+print("Number of missing elembents in 'Parch': %s" % len(temp)) #good. None.
+
+# Fare
+# checking if any data is missing
+temp = test.loc[np.isnan(test["Fare"]), "Fare"] 
+print("Number of missing elembents in 'Fare': %s" % len(temp)) #Just one
+test["Fare"] = test["Fare"].fillna(test["Fare"].median()) 
+
+# Cabin
+# checking if any data is missing
+temp = test.loc[pd.isnull(test["Cabin"]), "Cabin"] 
+print("Number of missing elembents in 'Cabin': %s" % len(temp)) #OKAY.  Here we see 687 missing values...
+# That is a huge fraction of 891.  We should strike the whole feature.  Can't  build mean out of such a small fraction and have it mean anything.
+# plus how do you even "mean" the cabin numbers.  Lets get rid of this.
+
+#Embarked
+# checking if any data is missing, again non-numeric
+print("Possible results for 'Embarked' feature: %s" % test["Embarked"].unique()) #lets see what output exists
+temp = test.loc[pd.isnull(test["Embarked"]), "Embarked"] 
+print("Number of missing elembents in 'Embarked': %s" % len(temp)) #two are missing.  We're gonna have to figure out what to do with them.
+temp1 = test.loc[(test["Embarked"]) == "S", "Embarked"] 
+temp2 = test.loc[(test["Embarked"]) == "C", "Embarked"] 
+temp3 = test.loc[(test["Embarked"]) == "Q", "Embarked"] 
+print("Embarked from 'S': %s, from 'C': %s, and from 'Q': %s. Grad total embarked non-empty: %s." % (len(temp1), len(temp2), len(temp3), len(temp1) + len(temp2)+ len(temp3)))
+# since we have an overwhelming number of 'S', I'm going to place the two missing with 'S'. (my 'mean' so to speak)
+
+
+test.loc[test["Embarked"] == "S", "Embarked"] = 0
+test.loc[test["Embarked"] == "C", "Embarked"] = 1
+test.loc[test["Embarked"] == "Q", "Embarked"] = 2
+
+#We have cleaned are data and we want to restrict to these features.  Also we 
+# want to isolate the labels (what we are trying to predict)
+
+X_test = test[features] #our restricted data matrix, (rows are passengers, columns are features)
+
+X_test["Sex"] = standardize_series(X_test["Sex"])
+X_test["Age"] = standardize_series(X_test["Age"])
+X_test["SibSp"] = standardize_series(X_test["SibSp"])
+X_test["Parch"] = standardize_series(X_test["Parch"])
+X_test["Fare"] = standardize_series(X_test["Fare"])
+
+#%%
+
+"""
+
+Fitting on ALL train data now, and predicting on the test
+
+"""
+print("Training for Kaggle Submission")
+
+gamma = 0.2
+C = 0.83     
+
+titanicSVMgauss = svm.SVC(kernel = "rbf", C = C, gamma = gamma)
+
+titanicSVMgauss.fit(X, labels) #fitting only on the training data 
+print("Predicting for Kaggle Submission")
+predictions = titanicSVMgauss.predict(X_test)
+print(predictions)
+
+
+#%% 
+
+output = pd.DataFrame({"PassengerId": test["PassengerId"], "Survived": predictions})
+output.to_csv('predictions.csv', index = False)
