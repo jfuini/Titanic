@@ -13,9 +13,10 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz #classification
 from sklearn.cross_validation import KFold #helper that makes it easy to do cross validation
 from sklearn import svm #support vector machine
 from sklearn.grid_search import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier #random forest
 import matplotlib.pyplot as plt #for plotting
 from mpl_toolkits.mplot3d import Axes3D
-
+import f1_score 
 
 
 data = pd.read_csv("train.csv") #import data to train
@@ -223,7 +224,7 @@ Classificaltion Tree
 """
 
 
-print("DATA ANALYSIS (Classification Tree):")
+print("CLASSIFICATION (Classification Tree):")
 X = Xy[features]
 labels = Xy["Survived"]
 
@@ -247,6 +248,7 @@ kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
 # and it returns all 10 ways to do this.  So one wants to train on the training sets and test on the remaining set, and do this ten times...
 # for the ten different random partitionings given to us and get an average error
 accuracy = np.zeros(num_folds)
+f1_scores = np.zeros(num_folds)
 i = 0;
 for train, test in kf:    
     #setting up the partitions of our data
@@ -265,13 +267,68 @@ for train, test in kf:
     total_tested = len(labels_test)
     frac_failed = sum(failure_array)/float(total_tested)
     accuracy[i] = (1 - frac_failed)
+    f1_scores[i] = f1_score.f1(predictions, labels_test)
     i = i + 1 #probably a more intelligent way to do this.
     
 print("TREE: Percentages of success for 10-fold cross validation")
 print(accuracy)
-
 ave_success = sum(accuracy)/num_folds
 print("Average success rate: %s" % ave_success)
+print("TREE: F1 scores for 10-fold cross validation")
+print(f1_scores)
+ave_f1 = sum(f1_scores)/num_folds
+print("Average F1 score: %s" % ave_f1)
+
+
+#%%
+"""
+Random Forest
+
+"""
+
+print("CLASSIFICATION (Random Forest):")
+
+
+#make a random forest classifier
+rf = RandomForestClassifier(n_estimators=50)
+
+#cross validation and error 
+predictions = []
+num_folds = 10
+kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
+accuracy = np.zeros(num_folds)
+f1_scores = np.zeros(num_folds)
+i = 0;
+for train, test in kf:    
+    #setting up the partitions of our data
+    X_train = X.loc[train] #subset of data to train on
+    X_test = X.loc[test] #subset of data to test on
+    labels_train = labels.loc[train]#labels pertaining to the train data
+    labels_test = labels.loc[test] #labels pertaining to the test data
+    
+    #training the tree
+    rf.fit(X_train, labels_train) #fitting only on the training data
+    predictions = rf.predict(X_test)
+    labels_test = labels_test.values #just turning this into an ndarray instead of a pandas series
+    
+    # monitor success rate
+    failure_array = abs(predictions - labels_test) # correct survival prediction will produce 0, fails will produce 1
+    total_tested = len(labels_test)
+    frac_failed = sum(failure_array)/float(total_tested)
+    accuracy[i] = (1 - frac_failed)
+    f1_scores[i] = f1_score.f1(predictions, labels_test)
+    i = i + 1 #probably a more intelligent way to do this.
+    
+print("Random Forest: Percentages of success for 10-fold cross validation")
+print(accuracy)
+ave_success = sum(accuracy)/num_folds
+print("Average success rate: %s" % ave_success)
+print("Random Forest: F1 scores for 10-fold cross validation")
+print(f1_scores)
+ave_f1 = sum(f1_scores)/num_folds
+print("Average F1 score: %s" % ave_f1)
+
+
 
 
 
@@ -281,7 +338,7 @@ print("Average success rate: %s" % ave_success)
 SVM Linear
 
 """
-print("DATA ANALYSIS (Support Vector Machines - Linear):")
+print("CLASSIFICATION (Support Vector Machines - Linear):")
 
 #how SVMs work
 #titanicSVM = svm.SVC()
@@ -296,7 +353,7 @@ predictions = []
 num_folds = 10
 kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
 accuracy = np.zeros(num_folds)
-accuracy_quad = np.zeros(num_folds)
+f1_scores = np.zeros(num_folds)
 i = 0;
 for train, test in kf:    
     #setting up the partitions of our data
@@ -315,14 +372,19 @@ for train, test in kf:
     total_tested = len(labels_test)
     frac_failed = sum(failure_array)/float(total_tested)
     accuracy[i] = (1 - frac_failed)
+    f1_scores[i] = f1_score.f1(predictions, labels_test)
     i = i + 1 #probably a more intelligent way to do this.
     
-print("SVM: Percentages of success for 10-fold cross validation")
-print("linear model: %s" % accuracy)
 
-
+print("SVM (linear): Percentages of success for 10-fold cross validation: %s" % accuracy)
 ave_success = sum(accuracy)/num_folds
-print("Average success rate for linear: %s" % ave_success)    
+print("Average success rate for linear: %s" % ave_success)   
+print("SVM (linear): F1 scores for 10-fold cross validation")
+print(f1_scores)
+ave_f1 = sum(f1_scores)/num_folds
+print("Average F1 score for linear: %s" % ave_f1)
+print("this is a better F1 than the Tree")
+
 
 #%%
 
@@ -334,32 +396,36 @@ SVM guassian (finding Parameters)
 # First use a cross validation set to find the best parameters, iterate over a
 # parameter grid
 
-print("DATA ANALYSIS (Support Vector Machines - Gaussian):")
+print("CLASSIFICATION (Support Vector Machines - Gaussian):")
 #gamma_vec = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30, 100, 300]
 #C_vec = gamma_vec
-gamma_vec = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45]
-C_vec = [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2]
+#gamma_vec = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45]
+#C_vec = [0.8, 0.85, 0.9, 0.95, 1, 1.05, 1.1, 1.15, 1.2]
+#gamma_vec = [0.15, 0.17, 0.19, 0.21, 0.23, 0.25]
+#C_vec = [0.75, 0.77, 0.79, 0.81, 0.83, 0.85]
+gamma_vec = [0.205, 0.21, 0.215, 0.22, 0.225, 0.23, 0.235]
+C_vec = [0.68, 0.69, 0.70, 0.71, 0.72, 0.73, 0.74, 0.75]
 num_folds = 10
 param_grid = dict(gamma=gamma_vec, C=C_vec)
 kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
 grid = GridSearchCV(svm.SVC(kernel = 'rbf'), param_grid=param_grid, cv=kf)
 grid.fit(X, labels)
 
-print("The best parameters are %s with a score of %0.2f"
+print("The best parameters are %s with a score of %0.4f"
       % (grid.best_params_, grid.best_score_))
 
-#The best parameters are {'C': 0.825, 'gamma': 0.2} with a score of 0.83
+#The best parameters are {'C': 0.68, 'gamma': 0.225} with a score of 0.8305
      
-gamma = 0.2
-C = 0.83     
+gamma = 0.225
+C = 0.68     
 
 #%%
 """
 SVM guassian (building classifier)
 """
 # Really now, this should be used on TEST data, and not the cross validation data.  
-gamma = 0.2
-C = 0.83     
+gamma = 0.225
+C = 0.68      
 #how SVMs work
 #titanicSVM = svm.SVC()
 #titanicSVM.fit(X, labels) # how to train an svm
@@ -373,7 +439,7 @@ predictions = []
 num_folds = 10
 kf = KFold(num_passengers, n_folds=num_folds, random_state=1)
 accuracy = np.zeros(num_folds)
-accuracy_quad = np.zeros(num_folds)
+f1_scores = np.zeros(num_folds)
 i = 0;
 for train, test in kf:    
     #setting up the partitions of our data
@@ -392,14 +458,19 @@ for train, test in kf:
     total_tested = len(labels_test)
     frac_failed = sum(failure_array)/float(total_tested)
     accuracy[i] = (1 - frac_failed)
+    f1_scores[i] = f1_score.f1(predictions, labels_test)
     i = i + 1 #probably a more intelligent way to do this.
     
-print("SVM: Percentages of success for 10-fold cross validation")
-print("SMV Gaussian model: %s" % accuracy)
 
-
+print("SVM (Gaussian): Percentages of success for 10-fold cross validation: %s" % accuracy)
 ave_success = sum(accuracy)/num_folds
 print("Average success rate for SVM Gaussian: %s" % ave_success)        
+print("SVM (Gaussian): F1 scores for 10-fold cross validation")
+print(f1_scores)
+ave_f1 = sum(f1_scores)/num_folds
+print("Average F1 score for SVM Gaussian: %s" % ave_f1)
+print("this is a *barely* better F1 than the SVM linear")
+
 
 
 
@@ -412,9 +483,8 @@ SVM Gaussian Visualiation
 
 
 """
-gamma = 0.2
-C = 0.83     
-
+gamma = 0.225
+C = 0.68      
 #2D classifier for visualization
 XyUnNorm = data[features + ["Survived"]]
 Xy_2d_males = XyUnNorm[["Age", "SibSp" ,"Survived"]][XyUnNorm["Sex"]==0]
@@ -508,6 +578,10 @@ X["Dependence"] = standardize_series(X["Dependence"])
 
 
 """
+
+
+
+
 
 
 
