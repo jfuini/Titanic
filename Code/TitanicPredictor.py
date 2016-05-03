@@ -9,13 +9,13 @@ Created on Tue Mar 22 23:05:06 2016
 #%%
 import pandas as pd
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier, export_graphviz #classification tree
+from sklearn.tree import DecisionTreeClassifier  #classification tree
 from sklearn.cross_validation import KFold #helper that makes it easy to do cross validation
 from sklearn import svm #support vector machine
 from sklearn.grid_search import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier #random forest
 import matplotlib.pyplot as plt #for plotting
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 import f1_score 
 
 
@@ -175,9 +175,45 @@ data.loc[data["Embarked"] == "Q", "Embarked"] = 2
 # want to isolate the labels (what we are trying to predict)
 
 Xy = data[features + ["Survived"]] #our restricted data matrix, (rows are passengers, columns are features)
+original_features = list(features) # making a *COPY* of the list
+
+#%%
+"""
+Feature Generation
+
+"""
+
+
+"""
+Determine parent or chidren!
+
+
+Here we want to split up our parent/child column into something that kind of dilineates 
+dependent or caretaker 
+
+Basically we want to make an dependet score if much lower that 20 y.o. or much greater that 60 years old,
+and then we want to  multiply this by the number of caretakers/dependents you have.
+
+We will conver the age to be negative if between 20 - 60, and positive other wise.  
+
+So, score =(age - 20)(age - 60)*Parch
+"""
+
+#Xy["Dependence"] = Xy["Parch"]*(Xy["Age"]-20)*(Xy["Age"]-60)
+#features.append("Dependence")
+#  This feature seemed to make classifiers worse....
+
+
+"""
+Titles
+
+"""
 
 
 
+
+
+#%%
 
 """
 Data Standardization
@@ -192,6 +228,7 @@ We will use the following standardization for each feature we standardize:
 x -> (x - mean)/std_deviation
 
 """
+Xy_UnNorm = Xy.copy(deep = True)
 
 def standardize_series(series):
     return (series-series.mean())/series.std()
@@ -201,6 +238,7 @@ Xy["Age"] = standardize_series(Xy["Age"])
 Xy["SibSp"] = standardize_series(Xy["SibSp"])
 Xy["Parch"] = standardize_series(Xy["Parch"])
 Xy["Fare"] = standardize_series(Xy["Fare"])
+#Xy["Dependence"] = standardize_series(Xy["Dependence"])
 
 
 
@@ -271,11 +309,11 @@ for train, test in kf:
     i = i + 1 #probably a more intelligent way to do this.
     
 print("TREE: Percentages of success for 10-fold cross validation")
-print(accuracy)
+#print(accuracy)
 ave_success = sum(accuracy)/num_folds
 print("Average success rate: %s" % ave_success)
 print("TREE: F1 scores for 10-fold cross validation")
-print(f1_scores)
+#print(f1_scores)
 ave_f1 = sum(f1_scores)/num_folds
 print("Average F1 score: %s" % ave_f1)
 
@@ -320,11 +358,11 @@ for train, test in kf:
     i = i + 1 #probably a more intelligent way to do this.
     
 print("Random Forest: Percentages of success for 10-fold cross validation")
-print(accuracy)
+#print(accuracy)
 ave_success = sum(accuracy)/num_folds
 print("Average success rate: %s" % ave_success)
 print("Random Forest: F1 scores for 10-fold cross validation")
-print(f1_scores)
+#print(f1_scores)
 ave_f1 = sum(f1_scores)/num_folds
 print("Average F1 score: %s" % ave_f1)
 
@@ -376,11 +414,11 @@ for train, test in kf:
     i = i + 1 #probably a more intelligent way to do this.
     
 
-print("SVM (linear): Percentages of success for 10-fold cross validation: %s" % accuracy)
+#print("SVM (linear): Percentages of success for 10-fold cross validation: %s" % accuracy)
 ave_success = sum(accuracy)/num_folds
 print("Average success rate for linear: %s" % ave_success)   
 print("SVM (linear): F1 scores for 10-fold cross validation")
-print(f1_scores)
+#print(f1_scores)
 ave_f1 = sum(f1_scores)/num_folds
 print("Average F1 score for linear: %s" % ave_f1)
 print("this is a better F1 than the Tree")
@@ -416,16 +454,15 @@ print("The best parameters are %s with a score of %0.4f"
 
 #The best parameters are {'C': 0.68, 'gamma': 0.225} with a score of 0.8305
      
-gamma = 0.225
-C = 0.68     
+gamma = grid.best_params_['gamma']
+C = grid.best_params_['C']     
 
 #%%
 """
 SVM guassian (building classifier)
 """
 # Really now, this should be used on TEST data, and not the cross validation data.  
-gamma = 0.225
-C = 0.68      
+
 #how SVMs work
 #titanicSVM = svm.SVC()
 #titanicSVM.fit(X, labels) # how to train an svm
@@ -462,11 +499,11 @@ for train, test in kf:
     i = i + 1 #probably a more intelligent way to do this.
     
 
-print("SVM (Gaussian): Percentages of success for 10-fold cross validation: %s" % accuracy)
+#print("SVM (Gaussian): Percentages of success for 10-fold cross validation: %s" % accuracy)
 ave_success = sum(accuracy)/num_folds
 print("Average success rate for SVM Gaussian: %s" % ave_success)        
 print("SVM (Gaussian): F1 scores for 10-fold cross validation")
-print(f1_scores)
+#print(f1_scores)
 ave_f1 = sum(f1_scores)/num_folds
 print("Average F1 score for SVM Gaussian: %s" % ave_f1)
 print("this is a *barely* better F1 than the SVM linear")
@@ -483,12 +520,10 @@ SVM Gaussian Visualiation
 
 
 """
-gamma = 0.225
-C = 0.68      
+  
 #2D classifier for visualization
-XyUnNorm = data[features + ["Survived"]]
-Xy_2d_males = XyUnNorm[["Age", "SibSp" ,"Survived"]][XyUnNorm["Sex"]==0]
-Xy_2d_females = XyUnNorm[["Age", "SibSp", "Survived"]][XyUnNorm["Sex"]==1]
+Xy_2d_males = Xy_UnNorm[["Age", "SibSp" ,"Survived"]][Xy_UnNorm["Sex"]==0]
+Xy_2d_females = Xy_UnNorm[["Age", "SibSp", "Survived"]][Xy_UnNorm["Sex"]==1]
 X_2d_males = Xy_2d_males[["Age","SibSp"]]
 X_2d_females = Xy_2d_females[["Age","SibSp"]]
 y_males = Xy_2d_males["Survived"]
@@ -545,39 +580,6 @@ plt.xlabel('Age')
 plt.ylabel('SibSp')
 plt.axis('tight')
 plt.show()
-
-
-"""
-Feature Generation that didn't seem to help any of our classifiers
-
-"""
-
-#%%
-"""
-Determine parent or chidren!
-
-
-Here we want to split up our parent/child column into something that kind of dilineates 
-dependent or caretaker 
-
-Basically we want to make an dependet score if much lower that 20 y.o. or much greater that 60 years old,
-and then we want to  multiply this by the number of caretakers/dependents you have.
-
-We will conver the age to be negative if between 20 - 60, and positive other wise.  
-
-So, score =(age - 20)(age - 60)*Parch
-"""
-
-"""
-
-X["Dependence"] = X["Parch"]*(X["Age"]-20)*(X["Age"]-60)
-features.append("Dependence")
-features.remove("Parch")
-X = X[features]
-X["Dependence"] = standardize_series(X["Dependence"])
-
-
-"""
 
 
 
@@ -655,9 +657,9 @@ def age_label(row):
     else: 
         return 3 #Adult
         
-XyUnNorm["Age_Group"] = XyUnNorm.apply(age_label, axis = 1)
+Xy_UnNorm["Age_Group"] = Xy_UnNorm.apply(age_label, axis = 1)
 
-age_groups_by_sex_survival = XyUnNorm.pivot_table(index = ["Age_Group", "Sex"], values = "Survived", aggfunc = np.mean)
+age_groups_by_sex_survival = Xy_UnNorm.pivot_table(index = ["Age_Group", "Sex"], values = "Survived", aggfunc = np.mean)
 
 males_survival_by_age_group = []
 females_survival_by_age_group = []
@@ -685,8 +687,8 @@ Lets visualize the 3 pairings of the top three important features
 
 #Xy["Survied"][Xy["Survived"]==1]
 
-s_frame = XyUnNorm[["Sex", "Age", "SibSp"]][XyUnNorm["Survived"]==1]
-d_frame = XyUnNorm[["Sex", "Age", "SibSp"]][XyUnNorm["Survived"]==0]
+s_frame = Xy_UnNorm[["Sex", "Age", "SibSp"]][Xy_UnNorm["Survived"]==1]
+d_frame = Xy_UnNorm[["Sex", "Age", "SibSp"]][Xy_UnNorm["Survived"]==0]
 s_males_frame = s_frame[["Age", "SibSp"]][s_frame["Sex"]==1]
 d_males_frame = d_frame[["Age", "SibSp"]][d_frame["Sex"]==1]
 s_females_frame = s_frame[["Age", "SibSp"]][s_frame["Sex"]==0]
@@ -822,13 +824,20 @@ test.loc[test["Embarked"] == "Q", "Embarked"] = 2
 #We have cleaned are data and we want to restrict to these features.  Also we 
 # want to isolate the labels (what we are trying to predict)
 
-X_test = test[features] #our restricted data matrix, (rows are passengers, columns are features)
+X_test = test[original_features] #our restricted data matrix, (rows are passengers, columns are features)
+
+"""
+Repeat Feature Generation/Normalization
+"""
+#X_test["Dependence"] = X_test["Parch"]*(X_test["Age"]-20)*(X_test["Age"]-60)
 
 X_test["Sex"] = standardize_series(X_test["Sex"])
 X_test["Age"] = standardize_series(X_test["Age"])
 X_test["SibSp"] = standardize_series(X_test["SibSp"])
 X_test["Parch"] = standardize_series(X_test["Parch"])
 X_test["Fare"] = standardize_series(X_test["Fare"])
+#X_test["Dependence"] = standardize_series(X_test["Dependence"])
+
 
 #%%
 
@@ -839,8 +848,8 @@ Fitting on ALL train data now, and predicting on the test
 """
 print("Training for Kaggle Submission")
 
-gamma = 0.2
-C = 0.83     
+gamma = grid.best_params_['gamma']
+C = grid.best_params_['C']    
 
 titanicSVMgauss = svm.SVC(kernel = "rbf", C = C, gamma = gamma)
 
