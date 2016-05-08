@@ -17,6 +17,8 @@ from sklearn.ensemble import RandomForestClassifier #random forest
 import matplotlib.pyplot as plt #for plotting
 #from mpl_toolkits.mplot3d import Axes3D
 import f1_score 
+import re
+
 
 
 data = pd.read_csv("train.csv") #import data to train
@@ -204,15 +206,55 @@ So, score =(age - 20)(age - 60)*Parch
 #  This feature seemed to make classifiers worse....
 
 
+#%%
 """
 Titles
 
+why is this taking so long?
+"""
+Xy["Title"] = np.NaN 
+titles = {}
+for i in range(len(data["Name"])):
+    test = re.sub('(.*, )|(\\..*)','', data.loc[i, "Name"])
+    print(i)
+    Xy.loc[i,"Title"] = str(test)
+    if test not in titles.keys():    
+        titles[test] = 1
+    else:
+        titles[test] = titles[test] + 1
+#print(titles)        
+
+
+#%%
 """
 
 
+"""
+Xy["TitleNum"] = 0
+for i in range(len(Xy["Title"])):
+    print(i)
+    if Xy.loc[i, "Title"] in ["Col","Capt","Major"]:
+        Xy.loc[i, "TitleNum"] = 5
+    elif Xy.loc[i, "Title"] in ["Dr"]:     
+        Xy.loc[i, "TitleNum"] = 4
+    elif Xy.loc[i, "Title"] in ["Mr"]:     
+        Xy.loc[i, "TitleNum"] = 3
+    elif Xy.loc[i, "Title"] in ["Rev"]:     
+        Xy.loc[i, "TitleNum"] = 2
+    elif Xy.loc[i, "Title"] in ["Master", "Sir"]:     
+        Xy.loc[i, "TitleNum"] = 1
+    elif Xy.loc[i, "Title"] in ["Mrs", "Miss", "Ms"]:     
+        Xy.loc[i, "TitleNum"] = -1
+    elif Xy.loc[i, "Title"] in ["Lady"]:     
+        Xy.loc[i, "TitleNum"] = -2
+    else:
+        Xy.loc[i, "TitleNum"] = 0
 
-
-
+features.append("TitleNum") 
+Xy = Xy[features + ["Survived"]]        
+        
+        
+        
 #%%
 
 """
@@ -239,7 +281,7 @@ Xy["SibSp"] = standardize_series(Xy["SibSp"])
 Xy["Parch"] = standardize_series(Xy["Parch"])
 Xy["Fare"] = standardize_series(Xy["Fare"])
 #Xy["Dependence"] = standardize_series(Xy["Dependence"])
-
+Xy["TitleNum"] = standardize_series(Xy["TitleNum"])
 
 
 
@@ -829,6 +871,55 @@ X_test = test[original_features] #our restricted data matrix, (rows are passenge
 """
 Repeat Feature Generation/Normalization
 """
+#%%
+"""
+Titles
+
+why is this taking so long?
+"""
+X_test["Title"] = np.NaN 
+titles = {}
+for i in range(len(X_test["Title"])):
+    temp_title = re.sub('(.*, )|(\\..*)','', data.loc[i, "Name"])
+    print(i)
+    X_test.loc[i,"Title"] = str(temp_title)
+    if test not in titles.keys():    
+        titles[temp_title] = 1
+    else:
+        titles[temp_title] = titles[temp_title] + 1
+#print(titles)        
+
+
+#%%
+"""
+
+
+"""
+X_test["TitleNum"] = 0
+for i in range(len(X_test["Title"])):
+    print(i)
+    if X_test.loc[i, "Title"] in ["Col","Capt","Major"]:
+        X_test.loc[i, "TitleNum"] = 5
+    elif X_test.loc[i, "Title"] in ["Dr"]:     
+        X_test.loc[i, "TitleNum"] = 4
+    elif X_test.loc[i, "Title"] in ["Mr"]:     
+        X_test.loc[i, "TitleNum"] = 3
+    elif X_test.loc[i, "Title"] in ["Rev"]:     
+        X_test.loc[i, "TitleNum"] = 2
+    elif X_test.loc[i, "Title"] in ["Master", "Sir"]:     
+        X_test.loc[i, "TitleNum"] = 1
+    elif X_test.loc[i, "Title"] in ["Mrs", "Miss", "Ms"]:     
+        X_test.loc[i, "TitleNum"] = -1
+    elif X_test.loc[i, "Title"] in ["Lady"]:     
+        X_test.loc[i, "TitleNum"] = -2
+    else:
+        X_test.loc[i, "TitleNum"] = 0
+
+X_test = X_test[features]        
+        
+        
+
+
 #X_test["Dependence"] = X_test["Parch"]*(X_test["Age"]-20)*(X_test["Age"]-60)
 
 X_test["Sex"] = standardize_series(X_test["Sex"])
@@ -837,6 +928,7 @@ X_test["SibSp"] = standardize_series(X_test["SibSp"])
 X_test["Parch"] = standardize_series(X_test["Parch"])
 X_test["Fare"] = standardize_series(X_test["Fare"])
 #X_test["Dependence"] = standardize_series(X_test["Dependence"])
+X_test["TitleNum"] = standardize_series(X_test["TitleNum"])
 
 
 #%%
